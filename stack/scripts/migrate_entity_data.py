@@ -234,35 +234,28 @@ class Migrate:
             self.logger.error('Keyboard interrupted migration. Please run again to ensure the migration finished.')
 
     def get_database_setup_url(self):
-        url = self.endpoint + '/system/database/setup'
-        return url
+        return f'{self.endpoint}/system/database/setup'
 
     def get_migration_url(self):
-        url = self.endpoint + '/system/migrate/run'
-        return url
+        return f'{self.endpoint}/system/migrate/run'
 
     def get_reset_migration_url(self):
-        url = self.endpoint + '/system/migrate/set'
-        return url
+        return f'{self.endpoint}/system/migrate/set'
 
     def get_migration_status_url(self):
-        url = self.endpoint + '/system/migrate/status'
-        return url
+        return f'{self.endpoint}/system/migrate/status'
 
     def get_reindex_url(self):
-        url = self.endpoint + '/system/index/rebuild'
-        return url
+        return f'{self.endpoint}/system/index/rebuild'
 
     def get_management_reindex_url(self):
-        url = self.get_reindex_url() + "/management"
-        return url
+        return f"{self.get_reindex_url()}/management"
 
 
     def start_core_data_migration(self):
         try:
             r = requests.put(url=self.get_migration_url(), auth=(self.admin_user, self.admin_pass))
-            response = r.json()
-            return response
+            return r.json()
         except requests.exceptions.RequestException as e:
             self.logger.error('Failed to start migration, %s', e)
             exit_on_error(str(e))
@@ -271,8 +264,7 @@ class Migrate:
     def start_fulldata_migration(self):
         try:
             r = requests.put(url=self.get_migration_url(), auth=(self.admin_user, self.admin_pass))
-            response = r.json()
-            return response
+            return r.json()
         except requests.exceptions.RequestException as e:
             self.logger.error('Failed to start migration, %s', e)
             exit_on_error(str(e))
@@ -280,10 +272,9 @@ class Migrate:
     def start_migration_system_update(self):
         try:
             #TODO fix this URL
-            migrateUrl = self.get_migration_url() + '/' + PLUGIN_MIGRATION_SYSTEM
+            migrateUrl = f'{self.get_migration_url()}/{PLUGIN_MIGRATION_SYSTEM}'
             r = requests.put(url=migrateUrl, auth=(self.admin_user, self.admin_pass))
-            response = r.json()
-            return response
+            return r.json()
         except requests.exceptions.RequestException as e:
             self.logger.error('Failed to start migration, %s', e)
             exit_on_error(str(e))
@@ -301,20 +292,18 @@ class Migrate:
 
     def start_index_mapping_migration(self):
         try:
-            migrateUrl = self.get_migration_url() + '/' + PLUGIN_INDEX_MAPPING
+            migrateUrl = f'{self.get_migration_url()}/{PLUGIN_INDEX_MAPPING}'
             r = requests.put(url=migrateUrl, auth=(self.admin_user, self.admin_pass))
-            response = r.json()
-            return response
+            return r.json()
         except requests.exceptions.RequestException as e:
             self.logger.error('Failed to start migration, %s', e)
             exit_on_error(str(e))
 
     def start_appinfo_migration(self):
         try:
-            migrateUrl = self.get_migration_url() + '/' + PLUGIN_APPINFO
+            migrateUrl = f'{self.get_migration_url()}/{PLUGIN_APPINFO}'
             r = requests.put(url=migrateUrl, auth=(self.admin_user, self.admin_pass))
-            response = r.json()
-            return response
+            return r.json()
         except requests.exceptions.RequestException as e:
             self.logger.error('Failed to start migration, %s', e)
             exit_on_error(str(e))
@@ -417,17 +406,15 @@ class Migrate:
         try:
             r = requests.get(url=self.get_migration_status_url(), auth=(self.admin_user, self.admin_pass))
             if r.status_code == 200:
-                response = r.json()
-                return response
-            else:
-                self.logger.error('Failed to check migration status, %s', r)
-                return
+                return r.json()
+            self.logger.error('Failed to check migration status, %s', r)
+            return
         except requests.exceptions.RequestException as e:
             self.logger.error('Failed to check migration status, %s', e)
             # exit_on_error()
 
     def get_reindex_status(self, job):
-        status_url = self.get_reindex_url()+'/' + job
+        status_url = f'{self.get_reindex_url()}/{job}'
 
         try:
             r = requests.get(url=status_url, auth=(self.admin_user, self.admin_pass))
@@ -458,15 +445,12 @@ class Migrate:
     def is_reindex_running(self, job):
         status = self.get_reindex_status(job)
         self.logger.info('Re-index status=[%s]', status)
-        if status != "COMPLETE":
-            return True
-        else:
-            return False
+        return status != "COMPLETE"
 
     def is_endpoint_available(self):
 
         try:
-            r = requests.get(url=self.endpoint+'/status')
+            r = requests.get(url=f'{self.endpoint}/status')
             if r.status_code == 200:
                 return True
         except requests.exceptions.RequestException as e:
@@ -496,7 +480,7 @@ def get_current_time():
 
 
 def exit_on_error(e=""):
-    print ('Exiting migration script due to error: ' + str(e))
+    print(f'Exiting migration script due to error: {str(e)}')
     sys.exit(1)
 
 

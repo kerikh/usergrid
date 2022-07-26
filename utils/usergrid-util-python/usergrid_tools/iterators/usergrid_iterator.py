@@ -191,11 +191,7 @@ def filter_entity(org_name, app_name, collection_name, entity_data, source_clien
     """
 
     # return None if you want to stop the chain (filter the entity out)
-    if 'blah' in entity_data:
-        return None
-
-    # return the entity to keep going
-    return entity_data
+    return None if 'blah' in entity_data else entity_data
 
 
 def transform_entity(org_name, app_name, collection_name, entity_data, source_client, target_client, attempts=0):
@@ -344,7 +340,7 @@ def init():
         if len(parts) == 2:
             config['collection_mapping'][parts[0]] = parts[1]
         else:
-            logger.warning('Skipping malformed Collection mapping: [%s]' % mapping)
+            logger.warning(f'Skipping malformed Collection mapping: [{mapping}]')
 
     for mapping in config.get('map_app', []):
         parts = mapping.split(':')
@@ -352,7 +348,7 @@ def init():
         if len(parts) == 2:
             config['app_mapping'][parts[0]] = parts[1]
         else:
-            logger.warning('Skipping malformed App mapping: [%s]' % mapping)
+            logger.warning(f'Skipping malformed App mapping: [{mapping}]')
 
     for mapping in config.get('map_org', []):
         parts = mapping.split(':')
@@ -360,13 +356,13 @@ def init():
         if len(parts) == 2:
             config['org_mapping'][parts[0]] = parts[1]
         else:
-            logger.warning('Skipping Org mapping: [%s]' % mapping)
+            logger.warning(f'Skipping Org mapping: [{mapping}]')
 
     if 'source_config' in config:
         config['source_endpoint'] = config['source_config'].get('endpoint').copy()
         config['source_endpoint'].update(config['source_config']['credentials'][config['org']])
 
-    config['target_org'] = config['target_org'] if config['target_org'] else config['org']
+    config['target_org'] = config['target_org'] or config['org']
 
     if 'target_config' in config:
         config['target_endpoint'] = config['target_config'].get('endpoint').copy()
@@ -384,15 +380,10 @@ def wait_for(arr_threads, sleep_time=3):
     threads_working = 100
 
     while threads_working > 0:
-        threads_working = 0
-
-        for t in arr_threads:
-
-            if t.is_alive():
-                threads_working += 1
+        threads_working = sum(1 for t in arr_threads if t.is_alive())
 
         if threads_working > 0:
-            logger.warn('Waiting for [%s] threads to finish...' % threads_working)
+            logger.warn(f'Waiting for [{threads_working}] threads to finish...')
             time.sleep(sleep_time)
 
     logger.warn('Worker Threads finished!')

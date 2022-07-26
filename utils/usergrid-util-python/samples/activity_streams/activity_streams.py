@@ -131,8 +131,8 @@ def delete_user(username):
 
 user_base = 'natgeo'
 
-user1 = '%s_%s' % (user_base, 1)
-user2 = '%s_%s' % (user_base, 2)
+user1 = f'{user_base}_1'
+user2 = f'{user_base}_2'
 
 create_user(user1)
 post_activity(user1, 'Hello World!')

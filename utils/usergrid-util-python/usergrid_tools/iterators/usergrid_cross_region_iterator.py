@@ -166,15 +166,10 @@ def wait_for(threads, sleep_time=3000):
     count_alive = 1
 
     while count_alive > 0:
-        count_alive = 0
-
-        for t in threads:
-
-            if t.is_alive():
-                count_alive += 1
+        count_alive = sum(1 for t in threads if t.is_alive())
 
         if count_alive > 0:
-            logger.warning('Waiting for [%s] processes to finish' % count_alive)
+            logger.warning(f'Waiting for [{count_alive}] processes to finish')
             time.sleep(sleep_time)
 
 
@@ -249,7 +244,7 @@ def get_by_UUID(org, app, collection, entity, counter, attempts=0):
                                              access_token=config['access_token'],
                                              **url_data)
 
-        logger.info('GET [%s]: %s' % ('...', url))
+        logger.info(f'GET [...]: {url}')
 
         session = session_map[region_id]
 
@@ -259,23 +254,23 @@ def get_by_UUID(org, app, collection, entity, counter, attempts=0):
                 r = session.get(url)
 
                 if r.status_code != 200:
-                    logger.error('GET [%s] (%s): %s' % (r.status_code, r.elapsed, url))
+                    logger.error(f'GET [{r.status_code}] ({r.elapsed}): {url}')
                     logger.warning('Sleeping for 5 on connection retry...')
 
                     return get_by_UUID(org, app, collection, entity, counter, attempts=attempts + 1)
 
                 else:
-                    logger.info('GET [%s] (%s): %s' % (r.status_code, r.elapsed, url))
+                    logger.info(f'GET [{r.status_code}] ({r.elapsed}): {url}')
                     response = True
 
                 if counter % 10 == 0:
-                    logger.info('COUNTER=[%s] time=[%s] GET [%s]: %s' % (counter,
-                                                                         r.elapsed,
-                                                                         r.status_code,
-                                                                         url))
+                    logger.info(
+                        f'COUNTER=[{counter}] time=[{r.elapsed}] GET [{r.status_code}]: {url}'
+                    )
+
             except:
                 logger.error(traceback.format_exc())
-                logger.error('EXCEPTION on GET [...] (...): %s' % url)
+                logger.error(f'EXCEPTION on GET [...] (...): {url}')
                 response = False
                 logger.warning('Sleeping for 5 on connection retry...')
                 time.sleep(5)
@@ -330,14 +325,14 @@ def main():
 
     url = token_url_template.format(**management_region)
 
-    logger.info('getting token with url=[%s] data=[%s]' % (url, token_request))
+    logger.info(f'getting token with url=[{url}] data=[{token_request}]')
 
     token_request['password'] = args.get('password')
 
     r = requests.post(url, data=json.dumps(token_request))
 
     if r.status_code != 200:
-        logger.critical('did not get access token! response: %s' % r.json())
+        logger.critical(f'did not get access token! response: {r.json()}')
         exit(-1)
 
     logger.info(r.json())
@@ -353,8 +348,8 @@ def main():
 
     r = session.get(org_mgmt_url)
     logger.info(r.json())
-    logger.info('starting [%s] workers...' % args.get('workers'))
-    workers = [Worker(queue, get_by_UUID) for x in xrange(args.get('workers'))]
+    logger.info(f"starting [{args.get('workers')}] workers...")
+    workers = [Worker(queue, get_by_UUID) for _ in xrange(args.get('workers'))]
     [w.start() for w in workers]
 
     try:
@@ -370,17 +365,17 @@ def main():
             app = parts[1]
 
             if len(apps_to_process) > 0 and app not in apps_to_process:
-                logger.info('Skipping app/uuid: %s/%s' % (org_app, app_uuid))
+                logger.info(f'Skipping app/uuid: {org_app}/{app_uuid}')
                 continue
 
-            logger.info('app UUID: %s' % app_uuid)
+            logger.info(f'app UUID: {app_uuid}')
 
             url = app_url_template.format(app=app,
                                           org=args.get('org'),
                                           access_token=config['access_token'],
                                           **management_region)
 
-            logger.info('GET [...]: %s' % url)
+            logger.info(f'GET [...]: {url}')
             session = session_map[management_region_id]
             r = session.get(url)
 
@@ -390,10 +385,10 @@ def main():
                     continue
 
                 elif len(collections_to_process) > 0 and collection_name not in collections_to_process:
-                    logger.info('skipping collection=%s' % collection_name)
+                    logger.info(f'skipping collection={collection_name}')
                     continue
 
-                logger.info('processing collection=%s' % collection_name)
+                logger.info(f'processing collection={collection_name}')
 
                 url = collection_query_url_template.format(ql='select * order by created asc',
                                                            collection=collection_name,
@@ -406,11 +401,11 @@ def main():
                 q = UsergridQuery(url)
                 counter = 0
 
-                for x, e in enumerate(q):
+                for e in q:
                     counter += 1
                     queue.put((args['org'], app, collection_name, e))
 
-                logger.info('collection=%s, count=%s' % (collection_name, counter))
+                logger.info(f'collection={collection_name}, count={counter}')
 
     except KeyboardInterrupt:
         [w.terminate() for w in workers]
@@ -419,7 +414,7 @@ def main():
     wait_for(workers)
 
     finish = datetime.datetime.now()
-    logger.warning('Done!  Took: %s ' % (finish - start))
+    logger.warning(f'Done!  Took: {finish - start} ')
 
 
 main()

@@ -74,14 +74,7 @@ def post(**kwargs):
 
 
 def build_role(name, title):
-    role = {
-        'name': name,
-        'roleName': name,
-        'inactivity': 0,
-        'title': title
-    }
-
-    return role
+    return {'name': name, 'roleName': name, 'inactivity': 0, 'title': title}
 
 
 def set_default_role(app):

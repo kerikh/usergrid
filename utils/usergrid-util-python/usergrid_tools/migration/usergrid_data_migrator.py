@@ -90,8 +90,10 @@ def init_logging(stdout_enabled=True):
     logging.getLogger('urllib3.connectionpool').setLevel(logging.WARN)
 
     log_formatter = logging.Formatter(
-            fmt='%(asctime)s | ' + ECID + ' | %(name)s | %(processName)s | %(levelname)s | %(message)s',
-            datefmt='%m/%d/%Y %I:%M:%S %p')
+        fmt=f'%(asctime)s | {ECID} | %(name)s | %(processName)s | %(levelname)s | %(message)s',
+        datefmt='%m/%d/%Y %I:%M:%S %p',
+    )
+
 
     stdout_logger = logging.StreamHandler(sys.stdout)
     stdout_logger.setFormatter(log_formatter)
@@ -102,8 +104,11 @@ def init_logging(stdout_enabled=True):
 
     # base log file
 
-    log_file_name = os.path.join(config.get('log_dir'),
-                                 '%s-%s-%s-migrator.log' % (config.get('org'), config.get('migrate'), ECID))
+    log_file_name = os.path.join(
+        config.get('log_dir'),
+        f"{config.get('org')}-{config.get('migrate')}-{ECID}-migrator.log",
+    )
+
 
     # ConcurrentRotatingFileHandler
     rotating_file = ConcurrentRotatingFileHandler(filename=log_file_name,
@@ -114,8 +119,11 @@ def init_logging(stdout_enabled=True):
     rotating_file.setLevel(logging.INFO)
 
     root_logger.addHandler(rotating_file)
-    error_log_file_name = os.path.join(config.get('log_dir'), '%s-%s-%s-migrator-errors.log' % (
-        config.get('org'), config.get('migrate'), ECID))
+    error_log_file_name = os.path.join(
+        config.get('log_dir'),
+        f"{config.get('org')}-{config.get('migrate')}-{ECID}-migrator-errors.log",
+    )
+
 
     error_rotating_file = ConcurrentRotatingFileHandler(filename=error_log_file_name,
                                                         mode='a',
@@ -555,23 +563,25 @@ def include_edge(collection_name, edge_name):
 
     if len(include_edges) > 0 and edge_name not in include_edges:
         logger.debug(
-                'Skipping edge [%s] since it is not in INCLUDED list: %s' % (edge_name, include_edges))
+            f'Skipping edge [{edge_name}] since it is not in INCLUDED list: {include_edges}'
+        )
+
         return False
 
     if edge_name in exclude_edges:
         logger.debug(
-                'Skipping edge [%s] since it is in EXCLUDED list: %s' % (edge_name, exclude_edges))
+            f'Skipping edge [{edge_name}] since it is in EXCLUDED list: {exclude_edges}'
+        )
+
         return False
 
-    if (collection_name in ['users', 'user'] and edge_name in ['followers', 'feed', 'activities']) \
-            or (collection_name in ['receipts', 'receipt'] and edge_name in ['device', 'devices']):
-        # feed and activities are not retrievable...
-        # roles and groups will be more efficiently handled from the role/group -> user
-        # followers will be handled by 'following'
-        # do only this from user -> device
-        return False
-
-    return True
+    return (
+        collection_name not in ['users', 'user']
+        or edge_name not in ['followers', 'feed', 'activities']
+    ) and (
+        collection_name not in ['receipts', 'receipt']
+        or edge_name not in ['device', 'devices']
+    )
 
 
 def exclude_edge(collection_name, edge_name):
@@ -581,18 +591,19 @@ def exclude_edge(collection_name, edge_name):
         exclude_edges = []
 
     if edge_name in exclude_edges:
-        logger.debug('Skipping edge [%s] since it is in EXCLUDED list: %s' % (edge_name, exclude_edges))
+        logger.debug(
+            f'Skipping edge [{edge_name}] since it is in EXCLUDED list: {exclude_edges}'
+        )
+
         return True
 
-    if (collection_name in ['users', 'user'] and edge_name in ['followers', 'feed', 'activities']) \
-            or (collection_name in ['receipts', 'receipt'] and edge_name in ['device', 'devices']):
-        # feed and activities are not retrievable...
-        # roles and groups will be more efficiently handled from the role/group -> user
-        # followers will be handled by 'following'
-        # do only this from user -> device
-        return True
-
-    return False
+    return (
+        collection_name in ['users', 'user']
+        and edge_name in ['followers', 'feed', 'activities']
+    ) or (
+        collection_name in ['receipts', 'receipt']
+        and edge_name in ['device', 'devices']
+    )
 
 
 def confirm_user_entity(app, source_entity, attempts=0):
@@ -605,8 +616,10 @@ def confirm_user_entity(app, source_entity, attempts=0):
                                                        **config.get('source_endpoint'))
 
     if attempts >= 5:
-        logger.warning('Punting after [%s] attempts to confirm user at URL [%s], will use the source entity...' % (
-            attempts, source_entity_url))
+        logger.warning(
+            f'Punting after [{attempts}] attempts to confirm user at URL [{source_entity_url}], will use the source entity...'
+        )
+
 
         return source_entity
 
@@ -617,21 +630,26 @@ def confirm_user_entity(app, source_entity, attempts=0):
 
         if retrieved_entity.get('uuid') != source_entity.get('uuid'):
             logger.info(
-                    'UUID of Source Entity [%s] differs from uuid [%s] of retrieved entity at URL=[%s] and will be substituted' % (
-                        source_entity.get('uuid'), retrieved_entity.get('uuid'), source_entity_url))
+                f"UUID of Source Entity [{source_entity.get('uuid')}] differs from uuid [{retrieved_entity.get('uuid')}] of retrieved entity at URL=[{source_entity_url}] and will be substituted"
+            )
+
 
         return retrieved_entity
 
     elif 'service_resource_not_found' in r.text:
 
-        logger.warn('Unable to retrieve user at URL [%s], and will use source entity.  status=[%s] response: %s...' % (
-            source_entity_url, r.status_code, r.text))
+        logger.warn(
+            f'Unable to retrieve user at URL [{source_entity_url}], and will use source entity.  status=[{r.status_code}] response: {r.text}...'
+        )
+
 
         return source_entity
 
     else:
-        logger.error('After [%s] attempts to confirm user at URL [%s], received status [%s] message: %s...' % (
-            attempts, source_entity_url, r.status_code, r.text))
+        logger.error(
+            f'After [{attempts}] attempts to confirm user at URL [{source_entity_url}], received status [{r.status_code}] message: {r.text}...'
+        )
+
 
         time.sleep(DEFAULT_RETRY_SLEEP)
 
@@ -644,29 +662,29 @@ def create_connection(app, collection_name, source_entity, edge_name, target_ent
     source_identifier = get_source_identifier(source_entity)
     target_identifier = get_source_identifier(target_entity)
 
-    source_type_id = '%s/%s' % (source_entity.get('type'), source_identifier)
-    target_type_id = '%s/%s' % (target_entity.get('type'), target_identifier)
+    source_type_id = f"{source_entity.get('type')}/{source_identifier}"
+    target_type_id = f"{target_entity.get('type')}/{target_identifier}"
 
     if source_entity.get('type') == 'user':
-        source_type_id = '%s/%s' % ('users', source_entity.get('username'))
+        source_type_id = f"{'users'}/{source_entity.get('username')}"
 
     if target_entity.get('type') == 'user':
         if edge_name == 'users':
             target_type_id = target_entity.get('uuid')
         else:
-            target_type_id = '%s/%s' % ('users', target_entity.get('uuid'))
+            target_type_id = f"{'users'}/{target_entity.get('uuid')}"
 
     if target_entity.get('type') == 'device':
         if edge_name == 'devices':
             target_type_id = target_entity.get('uuid')
         else:
-            target_type_id = '%s/%s' % ('devices', target_entity.get('uuid'))
+            target_type_id = f"{'devices'}/{target_entity.get('uuid')}"
 
     if target_entity.get('type') == 'receipt':
         if edge_name == 'receipts':
             target_type_id = target_entity.get('uuid')
         else:
-            target_type_id = '%s/%s' % ('receipts', target_entity.get('uuid'))
+            target_type_id = f"{'receipts'}/{target_entity.get('uuid')}"
 
     create_connection_url = connection_create_by_pairs_url_template.format(
             org=target_org,
@@ -680,21 +698,19 @@ def create_connection(app, collection_name, source_entity, edge_name, target_ent
         processed = cache.get(create_connection_url)
 
         if processed not in [None, 'None']:
-            logger.debug('Skipping visited Edge: [%s / %s / %s] --[%s]--> [%s / %s / %s]: %s ' % (
-                app, collection_name, source_identifier, edge_name, target_app, target_entity.get('type'),
-                target_entity.get('name'), create_connection_url))
+            logger.debug(
+                f"Skipping visited Edge: [{app} / {collection_name} / {source_identifier}] --[{edge_name}]--> [{target_app} / {target_entity.get('type')} / {target_entity.get('name')}]: {create_connection_url} "
+            )
+
 
             return True
 
-    logger.info('Connecting entity [%s / %s / %s] --[%s]--> [%s / %s / %s]: %s ' % (
-        app, collection_name, source_identifier, edge_name, target_app, target_entity.get('type'),
-        target_entity.get('name', target_entity.get('uuid')), create_connection_url))
+    logger.info(
+        f"Connecting entity [{app} / {collection_name} / {source_identifier}] --[{edge_name}]--> [{target_app} / {target_entity.get('type')} / {target_entity.get('name', target_entity.get('uuid'))}]: {create_connection_url} "
+    )
 
-    attempts = 0
 
-    while attempts < 5:
-        attempts += 1
-
+    for attempts in range(1, 6):
         r_create = session_target.post(create_connection_url)
 
         if r_create.status_code == 200:
@@ -707,30 +723,39 @@ def create_connection(app, collection_name, source_entity, edge_name, target_ent
             if r_create.status_code >= 500:
 
                 if attempts < 5:
-                    logger.warning('FAILED [%s] (will retry) to create connection at URL=[%s]: %s' % (
-                        r_create.status_code, create_connection_url, r_create.text))
+                    logger.warning(
+                        f'FAILED [{r_create.status_code}] (will retry) to create connection at URL=[{create_connection_url}]: {r_create.text}'
+                    )
+
                     time.sleep(DEFAULT_RETRY_SLEEP)
                 else:
                     logger.critical(
-                            'FAILED [%s] (WILL NOT RETRY - max attempts) to create connection at URL=[%s]: %s' % (
-                                r_create.status_code, create_connection_url, r_create.text))
+                        f'FAILED [{r_create.status_code}] (WILL NOT RETRY - max attempts) to create connection at URL=[{create_connection_url}]: {r_create.text}'
+                    )
+
                     return False
 
             elif r_create.status_code in [401, 404]:
 
                 if config.get('repair_data', False):
-                    logger.warning('FAILED [%s] (WILL attempt repair) to create connection at URL=[%s]: %s' % (
-                        r_create.status_code, create_connection_url, r_create.text))
+                    logger.warning(
+                        f'FAILED [{r_create.status_code}] (WILL attempt repair) to create connection at URL=[{create_connection_url}]: {r_create.text}'
+                    )
+
                     migrate_data(app, source_entity.get('type'), source_entity, force=True)
                     migrate_data(app, target_entity.get('type'), target_entity, force=True)
 
                 else:
-                    logger.critical('FAILED [%s] (WILL NOT attempt repair) to create connection at URL=[%s]: %s' % (
-                        r_create.status_code, create_connection_url, r_create.text))
+                    logger.critical(
+                        f'FAILED [{r_create.status_code}] (WILL NOT attempt repair) to create connection at URL=[{create_connection_url}]: {r_create.text}'
+                    )
+
 
             else:
-                logger.warning('FAILED [%s] (will retry) to create connection at URL=[%s]: %s' % (
-                    r_create.status_code, create_connection_url, r_create.text))
+                logger.warning(
+                    f'FAILED [{r_create.status_code}] (will retry) to create connection at URL=[{create_connection_url}]: {r_create.text}'
+                )
+
 
     return False
 
@@ -744,8 +769,10 @@ def process_edges(app, collection_name, source_entity, edge_name, connection_sta
         target_entity = connection_stack.pop()
 
         if exclude_collection(collection_name) or exclude_collection(target_entity.get('type')):
-            logger.debug('EXCLUDING Edge (collection): [%s / %s / %s] --[%s]--> ?' % (
-                app, collection_name, source_identifier, edge_name ))
+            logger.debug(
+                f'EXCLUDING Edge (collection): [{app} / {collection_name} / {source_identifier}] --[{edge_name}]--> ?'
+            )
+
             continue
 
         create_connection(app, collection_name, source_entity, edge_name, target_entity)
@@ -757,14 +784,16 @@ def migrate_out_graph_edge_type(app, collection_name, source_entity, edge_name, 
 
     source_uuid = source_entity.get('uuid')
 
-    key = '%s:edge:out:%s:%s' % (key_version, source_uuid, edge_name)
+    key = f'{key_version}:edge:out:{source_uuid}:{edge_name}'
 
     if not config.get('skip_cache_read', False):
         date_visited = cache.get(key)
 
         if date_visited not in [None, 'None']:
-            logger.info('Skipping EDGE [%s / %s --%s-->] - visited at %s' % (
-                collection_name, source_uuid, edge_name, date_visited))
+            logger.info(
+                f'Skipping EDGE [{collection_name} / {source_uuid} --{edge_name}-->] - visited at {date_visited}'
+            )
+
             return True
         else:
             cache.delete(key)
@@ -772,17 +801,17 @@ def migrate_out_graph_edge_type(app, collection_name, source_entity, edge_name, 
     if not config.get('skip_cache_write', False):
         cache.set(name=key, value=str(int(time.time())), ex=config.get('visit_cache_ttl', 3600 * 2))
 
-    logger.debug('Visiting EDGE [%s / %s (%s) --%s-->] at %s' % (
-        collection_name, source_uuid, get_uuid_time(source_uuid), edge_name, str(datetime.datetime.utcnow())))
+    logger.debug(
+        f'Visiting EDGE [{collection_name} / {source_uuid} ({get_uuid_time(source_uuid)}) --{edge_name}-->] at {str(datetime.datetime.utcnow())}'
+    )
 
-    response = True
 
     source_identifier = get_source_identifier(source_entity)
 
-    count_edges = 0
-
     logger.debug(
-            'Processing edge type=[%s] of entity [%s / %s / %s]' % (edge_name, app, collection_name, source_identifier))
+        f'Processing edge type=[{edge_name}] of entity [{app} / {collection_name} / {source_identifier}]'
+    )
+
 
     target_app, target_collection, target_org = get_target_mapping(app, collection_name)
 
@@ -807,16 +836,15 @@ def migrate_out_graph_edge_type(app, collection_name, source_entity, edge_name, 
 
         if not target_ok:
             logger.critical(
-                    'Error migrating TARGET entity data for connection [%s / %s / %s] --[%s]--> [%s / %s / %s]' % (
-                        app, collection_name, source_identifier, edge_name, app, target_connection_collection,
-                        target_entity.get('name', target_entity.get('uuid'))))
+                f"Error migrating TARGET entity data for connection [{app} / {collection_name} / {source_identifier}] --[{edge_name}]--> [{app} / {target_connection_collection} / {target_entity.get('name', target_entity.get('uuid'))}]"
+            )
 
-        count_edges += 1
+
         connection_stack.append(target_entity)
 
     process_edges(app, collection_name, source_entity, edge_name, connection_stack)
 
-    return response
+    return True
 
 
 def get_source_identifier(source_entity):
@@ -833,7 +861,7 @@ def get_source_identifier(source_entity):
 
         if source_identifier is None:
             source_identifier = source_entity.get('uuid')
-            logger.warn('Using UUID for entity [%s / %s]' % (entity_type, source_identifier))
+            logger.warn(f'Using UUID for entity [{entity_type} / {source_identifier}]')
 
     return source_identifier
 
@@ -849,31 +877,27 @@ def include_collection(collection_name):
 
     exclude = config.get('exclude_collection', [])
 
-    if exclude is not None and collection_name in exclude:
-        return False
-
-    return True
+    return exclude is None or collection_name not in exclude
 
 
 def exclude_collection(collection_name):
     exclude = config.get('exclude_collection', [])
 
-    if exclude is not None and collection_name in exclude:
-        return True
-
-    return False
+    return exclude is not None and collection_name in exclude
 
 
 def migrate_in_graph_edge_type(app, collection_name, source_entity, edge_name, depth=0):
     source_uuid = source_entity.get('uuid')
-    key = '%s:edges:in:%s:%s' % (key_version, source_uuid, edge_name)
+    key = f'{key_version}:edges:in:{source_uuid}:{edge_name}'
 
     if not config.get('skip_cache_read', False):
         date_visited = cache.get(key)
 
         if date_visited not in [None, 'None']:
-            logger.info('Skipping EDGE [--%s--> %s / %s] - visited at %s' % (
-                collection_name, source_uuid, edge_name, date_visited))
+            logger.info(
+                f'Skipping EDGE [--{collection_name}--> {source_uuid} / {edge_name}] - visited at {date_visited}'
+            )
+
             return True
         else:
             cache.delete(key)
@@ -881,23 +905,32 @@ def migrate_in_graph_edge_type(app, collection_name, source_entity, edge_name, d
     if not config.get('skip_cache_write', False):
         cache.set(name=key, value=str(int(time.time())), ex=config.get('visit_cache_ttl', 3600 * 2))
 
-    logger.debug('Visiting EDGE [--%s--> %s / %s (%s)] at %s' % (
-        edge_name, collection_name, source_uuid, get_uuid_time(source_uuid), str(datetime.datetime.utcnow())))
+    logger.debug(
+        f'Visiting EDGE [--{edge_name}--> {collection_name} / {source_uuid} ({get_uuid_time(source_uuid)})] at {str(datetime.datetime.utcnow())}'
+    )
+
 
     source_identifier = get_source_identifier(source_entity)
 
     if exclude_collection(collection_name):
-        logger.debug('Excluding (Collection) entity [%s / %s / %s]' % (app, collection_name, source_uuid))
+        logger.debug(
+            f'Excluding (Collection) entity [{app} / {collection_name} / {source_uuid}]'
+        )
+
         return True
 
     if not include_edge(collection_name, edge_name):
         return True
 
     logger.debug(
-            'Processing edge type=[%s] of entity [%s / %s / %s]' % (edge_name, app, collection_name, source_identifier))
+        f'Processing edge type=[{edge_name}] of entity [{app} / {collection_name} / {source_identifier}]'
+    )
 
-    logger.debug('Processing IN edges type=[%s] of entity [ %s / %s / %s]' % (
-        edge_name, app, collection_name, source_uuid))
+
+    logger.debug(
+        f'Processing IN edges type=[{edge_name}] of entity [ {app} / {collection_name} / {source_uuid}]'
+    )
+
 
     connecting_query_url = connecting_query_url_template.format(
             org=config.get('org'),
@@ -913,8 +946,10 @@ def migrate_in_graph_edge_type(app, collection_name, source_entity, edge_name, d
     response = True
 
     for e_connection in connection_query:
-        logger.debug('Triggering IN->OUT edge migration on entity [%s / %s / %s] ' % (
-            app, e_connection.get('type'), e_connection.get('uuid')))
+        logger.debug(
+            f"Triggering IN->OUT edge migration on entity [{app} / {e_connection.get('type')} / {e_connection.get('uuid')}] "
+        )
+
 
         response = migrate_graph(app, e_connection.get('type'), e_connection, depth) and response
 
@@ -928,28 +963,34 @@ def migrate_graph(app, collection_name, source_entity, depth=0):
     # short circuit if the graph depth exceeds what was specified
     if depth > config.get('graph_depth', 1):
         logger.debug(
-                'Reached Max Graph Depth, stopping after [%s] on [%s / %s]' % (depth, collection_name, source_uuid))
+            f'Reached Max Graph Depth, stopping after [{depth}] on [{collection_name} / {source_uuid}]'
+        )
+
         return True
     else:
-        logger.debug('Processing @ Graph Depth [%s]' % depth)
+        logger.debug(f'Processing @ Graph Depth [{depth}]')
 
     if exclude_collection(collection_name):
-        logger.warn('Ignoring entity in filtered collection [%s]' % collection_name)
+        logger.warn(f'Ignoring entity in filtered collection [{collection_name}]')
         return True
 
-    key = '%s:graph:%s' % (key_version, source_uuid)
-    entity_tag = '[%s / %s / %s (%s)]' % (app, collection_name, source_uuid, get_uuid_time(source_uuid))
+    key = f'{key_version}:graph:{source_uuid}'
+    entity_tag = f'[{app} / {collection_name} / {source_uuid} ({get_uuid_time(source_uuid)})]'
+
 
     if not config.get('skip_cache_read', False):
         date_visited = cache.get(key)
 
         if date_visited not in [None, 'None']:
-            logger.debug('Skipping GRAPH %s at %s' % (entity_tag, date_visited))
+            logger.debug(f'Skipping GRAPH {entity_tag} at {date_visited}')
             return True
         else:
             cache.delete(key)
 
-    logger.info('Visiting GRAPH %s at %s' % (entity_tag, str(datetime.datetime.utcnow())))
+    logger.info(
+        f'Visiting GRAPH {entity_tag} at {str(datetime.datetime.utcnow())}'
+    )
+
 
     if not config.get('skip_cache_write', False):
         cache.set(name=key, value=str(int(time.time())), ex=config.get('visit_cache_ttl', 3600 * 2))
@@ -958,10 +999,13 @@ def migrate_graph(app, collection_name, source_entity, depth=0):
     response = migrate_data(app, collection_name, source_entity)
 
     # gather the outbound edge names
-    out_edge_names = [edge_name for edge_name in source_entity.get('metadata', {}).get('collections', [])]
-    out_edge_names += [edge_name for edge_name in source_entity.get('metadata', {}).get('connections', [])]
+    out_edge_names = list(source_entity.get('metadata', {}).get('collections', []))
+    out_edge_names += list(
+        source_entity.get('metadata', {}).get('connections', [])
+    )
 
-    logger.debug('Entity %s has [%s] OUT edges' % (entity_tag, len(out_edge_names)))
+
+    logger.debug(f'Entity {entity_tag} has [{len(out_edge_names)}] OUT edges')
 
     # migrate each outbound edge type
     for edge_name in out_edge_names:
@@ -973,9 +1017,9 @@ def migrate_graph(app, collection_name, source_entity, depth=0):
             prune_edge_by_name(edge_name, app, collection_name, source_entity)
 
     # gather the inbound edge names
-    in_edge_names = [edge_name for edge_name in source_entity.get('metadata', {}).get('connecting', [])]
+    in_edge_names = list(source_entity.get('metadata', {}).get('connecting', []))
 
-    logger.debug('Entity %s has [%s] IN edges' % (entity_tag, len(in_edge_names)))
+    logger.debug(f'Entity {entity_tag} has [{len(in_edge_names)}] IN edges')
 
     # migrate each inbound edge type
     for edge_name in in_edge_names:
@@ -988,12 +1032,7 @@ def migrate_graph(app, collection_name, source_entity, depth=0):
 
 
 def collect_entities(q):
-    response = {}
-
-    for e in q:
-        response[e.get('uuid')] = e
-
-    return response
+    return {e.get('uuid'): e for e in q}
 
 
 def prune_edge_by_name(edge_name, app, collection_name, source_entity):
@@ -1003,7 +1042,8 @@ def prune_edge_by_name(edge_name, app, collection_name, source_entity):
     source_identifier = get_source_identifier(source_entity)
     source_uuid = source_entity.get('uuid')
 
-    entity_tag = '[%s / %s / %s (%s)]' % (app, collection_name, source_uuid, get_uuid_time(source_uuid))
+    entity_tag = f'[{app} / {collection_name} / {source_uuid} ({get_uuid_time(source_uuid)})]'
+
 
     target_app, target_collection, target_org = get_target_mapping(app, collection_name)
 
@@ -1034,7 +1074,10 @@ def prune_edge_by_name(edge_name, app, collection_name, source_entity):
     delete_uuids = Set(target_connections.keys()) - Set(source_connections.keys())
 
     if len(delete_uuids) > 0:
-        logger.info('Found [%s] edges to delete for entity %s' % (len(delete_uuids), entity_tag))
+        logger.info(
+            f'Found [{len(delete_uuids)}] edges to delete for entity {entity_tag}'
+        )
+
 
         for delete_uuid in delete_uuids:
             delete_connection_url = connection_create_by_uuid_url_template.format(
@@ -1057,11 +1100,16 @@ def prune_edge_by_name(edge_name, app, collection_name, source_entity):
                     cache.delete(delete_connection_url)
 
                 if r.status_code == 200:
-                    logger.info('Pruned edge on attempt [%s] URL=[%s]' % (attempts, delete_connection_url))
+                    logger.info(
+                        f'Pruned edge on attempt [{attempts}] URL=[{delete_connection_url}]'
+                    )
+
                     break
                 else:
-                    logger.error('Error [%s] on attempt [%s] deleting connection at URL=[%s]: %s' % (
-                        r.status_code, attempts, delete_connection_url, r.text))
+                    logger.error(
+                        f'Error [{r.status_code}] on attempt [{attempts}] deleting connection at URL=[{delete_connection_url}]: {r.text}'
+                    )
+
                     time.sleep(DEFAULT_RETRY_SLEEP)
 
     return True
@@ -1069,28 +1117,35 @@ def prune_edge_by_name(edge_name, app, collection_name, source_entity):
 
 def prune_graph(app, collection_name, source_entity):
     source_uuid = source_entity.get('uuid')
-    key = '%s:prune_graph:%s' % (key_version, source_uuid)
-    entity_tag = '[%s / %s / %s (%s)]' % (app, collection_name, source_uuid, get_uuid_time(source_uuid))
+    key = f'{key_version}:prune_graph:{source_uuid}'
+    entity_tag = f'[{app} / {collection_name} / {source_uuid} ({get_uuid_time(source_uuid)})]'
+
 
     if not config.get('skip_cache_read', False):
         date_visited = cache.get(key)
 
         if date_visited not in [None, 'None']:
-            logger.debug('Skipping PRUNE %s at %s' % (entity_tag, date_visited))
+            logger.debug(f'Skipping PRUNE {entity_tag} at {date_visited}')
             return True
         else:
             cache.delete(key)
 
-    logger.debug('pruning GRAPH %s at %s' % (entity_tag, str(datetime.datetime.utcnow())))
+    logger.debug(
+        f'pruning GRAPH {entity_tag} at {str(datetime.datetime.utcnow())}'
+    )
+
     if not config.get('skip_cache_write', False):
         cache.set(name=key, value=str(int(time.time())), ex=config.get('visit_cache_ttl', 3600 * 2))
 
     if collection_name in config.get('exclude_collection', []):
-        logger.debug('Excluding (Collection) entity %s' % entity_tag)
+        logger.debug(f'Excluding (Collection) entity {entity_tag}')
         return True
 
-    out_edge_names = [edge_name for edge_name in source_entity.get('metadata', {}).get('collections', [])]
-    out_edge_names += [edge_name for edge_name in source_entity.get('metadata', {}).get('connections', [])]
+    out_edge_names = list(source_entity.get('metadata', {}).get('collections', []))
+    out_edge_names += list(
+        source_entity.get('metadata', {}).get('connections', [])
+    )
+
 
     for edge_name in out_edge_names:
         prune_edge_by_name(edge_name, app, collection_name, source_entity)
@@ -1109,9 +1164,9 @@ def reput(app, collection_name, source_entity, attempts=0):
 
         r = session_source.put(target_entity_url_by_name, data=json.dumps({}))
         if r.status_code != 200:
-            logger.info('HTTP [%s]: %s' % (target_entity_url_by_name, r.status_code))
+            logger.info(f'HTTP [{target_entity_url_by_name}]: {r.status_code}')
         else:
-            logger.debug('HTTP [%s]: %s' % (target_entity_url_by_name, r.status_code))
+            logger.debug(f'HTTP [{target_entity_url_by_name}]: {r.status_code}')
 
     except:
         pass
@@ -1138,14 +1193,20 @@ def migrate_permissions(app, collection_name, source_entity, attempts=0):
     r = session_source.get(source_permissions_url)
 
     if r.status_code != 200:
-        logger.error('Unable to get permissions at URL [%s]: %s' % (source_permissions_url, r.text))
+        logger.error(
+            f'Unable to get permissions at URL [{source_permissions_url}]: {r.text}'
+        )
+
         return False
 
     perm_response = r.json()
 
     perms = perm_response.get('data', [])
 
-    logger.info('Migrating [%s / %s] with permissions %s' % (collection_name, source_identifier, perms))
+    logger.info(
+        f'Migrating [{collection_name} / {source_identifier}] with permissions {perms}'
+    )
+
 
     if len(perms) > 0:
         target_permissions_url = permissions_url_template.format(org=target_org,
@@ -1157,14 +1218,18 @@ def migrate_permissions(app, collection_name, source_entity, attempts=0):
         for permission in perms:
             data = {'permission': permission}
 
-            logger.info('Posting permission %s to %s' % (json.dumps(data), target_permissions_url))
+            logger.info(
+                f'Posting permission {json.dumps(data)} to {target_permissions_url}'
+            )
+
 
             r = session_target.post(target_permissions_url, json.dumps(data))
 
             if r.status_code != 200:
                 logger.error(
-                        'ERROR posting permission %s to URL=[%s]: %s' % (
-                            json.dumps(data), target_permissions_url, r.text))
+                    f'ERROR posting permission {json.dumps(data)} to URL=[{target_permissions_url}]: {r.text}'
+                )
+
 
     return True
 

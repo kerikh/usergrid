@@ -75,13 +75,14 @@ def convert_parse_entity(collection, parse_entity):
     connections = {}
 
     for name, value in parse_entity.iteritems():
-        if isinstance(value, dict):
-            if value.get('__type') == 'Pointer':
-                class_name = value.get('className') if value.get('className')[0] != '_' else value.get('className')[1:]
-                connections[value.get('objectId')] = class_name
+        if isinstance(value, dict) and value.get('__type') == 'Pointer':
+            class_name = value.get('className') if value.get('className')[0] != '_' else value.get('className')[1:]
+            connections[value.get('objectId')] = class_name
 
-                logger.info('Connection found from [%s: %s] to entity [%s: %s]' % (
-                    collection, parse_entity['name'], class_name, value.get('objectId')))
+            logger.info(
+                f"Connection found from [{collection}: {parse_entity['name']}] to entity [{class_name}: {value.get('objectId')}]"
+            )
+
 
     return UsergridEntity(parse_entity), connections
 
@@ -96,47 +97,63 @@ def build_usergrid_entity(collection, entity_uuid, data=None):
 def load_users_and_roles(working_directory):
     with open(os.path.join(working_directory, '_User.json'), 'r') as f:
         users = json.load(f).get('results', [])
-        logger.info('Loaded [%s] Users' % len(users))
+        logger.info(f'Loaded [{len(users)}] Users')
 
     for i, parse_user in enumerate(users):
-        logger.info('Loading user [%s]: [%s / %s]' % (i, parse_user['username'], parse_user['objectId']))
+        logger.info(
+            f"Loading user [{i}]: [{parse_user['username']} / {parse_user['objectId']}]"
+        )
+
         usergrid_user, connections = convert_parse_entity('users', parse_user)
         res = usergrid_user.save()
 
         if res.ok:
-            logger.info('Saved user [%s]: [%s / %s]' % (i, parse_user['username'], parse_user['objectId']))
+            logger.info(
+                f"Saved user [{i}]: [{parse_user['username']} / {parse_user['objectId']}]"
+            )
+
 
             if 'uuid' in usergrid_user.entity_data:
                 parse_id_to_uuid_map[parse_user['objectId']] = usergrid_user.get('uuid')
         else:
             logger.error(
-                    'Error saving user [%s]: [%s / %s] - %s' % (i, parse_user['username'], parse_user['objectId'], res))
+                f"Error saving user [{i}]: [{parse_user['username']} / {parse_user['objectId']}] - {res}"
+            )
+
 
     with open(os.path.join(working_directory, '_Role.json'), 'r') as f:
         roles = json.load(f).get('results', [])
-        logger.info('Loaded [%s] Roles' % len(roles))
+        logger.info(f'Loaded [{len(roles)}] Roles')
 
     for i, parse_role in enumerate(roles):
-        logger.info('Loading role [%s]: [%s / %s]' % (i, parse_role['name'], parse_role['objectId']))
+        logger.info(
+            f"Loading role [{i}]: [{parse_role['name']} / {parse_role['objectId']}]"
+        )
+
         usergrid_role, connections = convert_parse_entity('roles', parse_role)
         res = usergrid_role.save()
 
         if res.ok:
-            logger.info('Saved role [%s]: [%s / %s]' % (i, parse_role['name'], parse_role['objectId']))
+            logger.info(
+                f"Saved role [{i}]: [{parse_role['name']} / {parse_role['objectId']}]"
+            )
+
 
             if 'uuid' in usergrid_role.entity_data:
                 parse_id_to_uuid_map[parse_role['objectId']] = usergrid_role.get('uuid')
 
         else:
             logger.error(
-                    'Error saving role [%s]: [%s / %s] - %s' % (i, parse_role['name'], parse_role['objectId'], res))
+                f"Error saving role [{i}]: [{parse_role['name']} / {parse_role['objectId']}] - {res}"
+            )
+
 
     join_file = os.path.join(working_directory, '_Join:users:_Role.json')
 
     if os.path.isfile(join_file) and os.path.getsize(join_file) > 0:
         with open(join_file, 'r') as f:
             users_to_roles = json.load(f).get('results', [])
-            logger.info('Loaded [%s] User->Roles' % len(users_to_roles))
+            logger.info(f'Loaded [{len(users_to_roles)}] User->Roles')
 
             for user_to_role in users_to_roles:
                 role_id = user_to_role['owningId']
@@ -146,7 +163,10 @@ def load_users_and_roles(working_directory):
                 target_role_uuid = parse_id_to_uuid_map.get(target_role_id)
 
                 if role_uuid is None or target_role_uuid is None:
-                    logger.error('Failed on assigning role [%s] to user [%s]' % (role_uuid, target_role_uuid))
+                    logger.error(
+                        f'Failed on assigning role [{role_uuid}] to user [{target_role_uuid}]'
+                    )
+
                     continue
 
                 target_role_entity = build_usergrid_entity('user', target_role_uuid)
@@ -154,9 +174,12 @@ def load_users_and_roles(working_directory):
                 res = Usergrid.assign_role(role_uuid, target_role_entity)
 
                 if res.ok:
-                    logger.info('Assigned role [%s] to user [%s]' % (role_uuid, target_role_uuid))
+                    logger.info(f'Assigned role [{role_uuid}] to user [{target_role_uuid}]')
                 else:
-                    logger.error('Failed on assigning role [%s] to user [%s]' % (role_uuid, target_role_uuid))
+                    logger.error(
+                        f'Failed on assigning role [{role_uuid}] to user [{target_role_uuid}]'
+                    )
+
 
     else:
         logger.info('No Users -> Roles to load')
@@ -166,7 +189,7 @@ def load_users_and_roles(working_directory):
     if os.path.isfile(join_file) and os.path.getsize(join_file) > 0:
         with open(join_file, 'r') as f:
             users_to_roles = json.load(f).get('results', [])
-            logger.info('Loaded [%s] Roles->Roles' % len(users_to_roles))
+            logger.info(f'Loaded [{len(users_to_roles)}] Roles->Roles')
 
             for user_to_role in users_to_roles:
                 role_id = user_to_role['owningId']
@@ -176,7 +199,10 @@ def load_users_and_roles(working_directory):
                 target_role_uuid = parse_id_to_uuid_map.get(target_role_id)
 
                 if role_uuid is None or target_role_uuid is None:
-                    logger.error('Failed on assigning role [%s] to role [%s]' % (role_uuid, target_role_uuid))
+                    logger.error(
+                        f'Failed on assigning role [{role_uuid}] to role [{target_role_uuid}]'
+                    )
+
                     continue
 
                 target_role_entity = build_usergrid_entity('role', target_role_uuid)
@@ -184,9 +210,12 @@ def load_users_and_roles(working_directory):
                 res = Usergrid.assign_role(role_uuid, target_role_entity)
 
                 if res.ok:
-                    logger.info('Assigned role [%s] to role [%s]' % (role_uuid, target_role_uuid))
+                    logger.info(f'Assigned role [{role_uuid}] to role [{target_role_uuid}]')
                 else:
-                    logger.error('Failed on assigning role [%s] to role [%s]' % (role_uuid, target_role_uuid))
+                    logger.error(
+                        f'Failed on assigning role [{role_uuid}] to role [{target_role_uuid}]'
+                    )
+
 
     else:
         logger.info('No Roles -> Roles to load')
@@ -290,13 +319,14 @@ def connect_entities(from_entity, to_entity, connection_name):
     connect_response = from_entity.connect(connection_name, to_entity)
 
     if connect_response.ok:
-        logger.info('Successfully connected [%s / %s]--[%s]-->[%s / %s]' % (
-            from_entity.get('type'), from_entity.get('uuid'), connection_name, to_entity.get('type'),
-            to_entity.get('uuid')))
+        logger.info(
+            f"Successfully connected [{from_entity.get('type')} / {from_entity.get('uuid')}]--[{connection_name}]-->[{to_entity.get('type')} / {to_entity.get('uuid')}]"
+        )
+
     else:
-        logger.error('Unable to connect [%s / %s]--[%s]-->[%s / %s]: %s' % (
-            from_entity.get('type'), from_entity.get('uuid'), connection_name, to_entity.get('type'),
-            to_entity.get('uuid'), connect_response))
+        logger.error(
+            f"Unable to connect [{from_entity.get('type')} / {from_entity.get('uuid')}]--[{connection_name}]-->[{to_entity.get('type')} / {to_entity.get('uuid')}]: {connect_response}"
+        )
 
 
 def create_connections():

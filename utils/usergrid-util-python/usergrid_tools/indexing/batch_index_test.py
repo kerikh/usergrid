@@ -151,9 +151,7 @@ def test_multiple(number_of_entities):
 
     start = datetime.datetime.now()
 
-    logger.info('Creating %s entities w/ url=%s' % (number_of_entities, config['url']))
-    created_map = {}
-
+    logger.info(f"Creating {number_of_entities} entities w/ url={config['url']}")
     work_items = []
 
     for x in xrange(1, number_of_entities + 1):
@@ -163,26 +161,22 @@ def test_multiple(number_of_entities):
 
     responses = processes.map(create_entity, work_items)
 
-    for res in responses:
-        if len(res) > 0:
-            created_map[res[0]] = res[1]
-
+    created_map = {res[0]: res[1] for res in responses if len(res) > 0}
     stop = datetime.datetime.now()
 
-    logger.info('Created [%s] entities in %s' % (number_of_entities, (stop - start)))
+    logger.info(f'Created [{number_of_entities}] entities in {stop - start}')
 
     return created_map
 
 
 def wait_for_indexing(created_map, q_url, sleep_time=0.0):
-    logger.info('Waiting for indexing of [%s] entities...' % len(created_map))
+    logger.info(f'Waiting for indexing of [{len(created_map)}] entities...')
 
     count_missing = 100
     start_time = datetime.datetime.now()
 
     while count_missing > 0:
 
-        entity_map = {}
         r = session.get(q_url)
         res = r.json()
         entities = res.get('entities', [])
@@ -190,37 +184,41 @@ def wait_for_indexing(created_map, q_url, sleep_time=0.0):
         now_time = datetime.datetime.now()
         elapsed = now_time - start_time
 
-        logger.info('Found [%s] of [%s] ([%s] missing) after [%s] entities at url: %s' % (
-            len(entities), len(created_map), (len(created_map) - len(entities)), elapsed, q_url))
+        logger.info(
+            f'Found [{len(entities)}] of [{len(created_map)}] ([{len(created_map) - len(entities)}] missing) after [{elapsed}] entities at url: {q_url}'
+        )
+
 
         count_missing = 0
 
-        for entity in entities:
-            entity_map[entity.get('uuid')] = entity
-
+        entity_map = {entity.get('uuid'): entity for entity in entities}
         for uuid, created_entity in created_map.iteritems():
             if uuid not in entity_map:
                 count_missing += 1
-                logger.info('Missing uuid=[%s] Id=[%s] total missing=[%s]' % (
-                    uuid, created_entity.get('id'), count_missing))
+                logger.info(
+                    f"Missing uuid=[{uuid}] Id=[{created_entity.get('id')}] total missing=[{count_missing}]"
+                )
+
 
         if count_missing > 0:
-            logger.info('Waiting for indexing, count_missing=[%s] Total time [%s] Sleeping for [%s]s' % (
-                elapsed, count_missing, sleep_time))
+            logger.info(
+                f'Waiting for indexing, count_missing=[{elapsed}] Total time [{count_missing}] Sleeping for [{sleep_time}]s'
+            )
+
 
             time.sleep(sleep_time)
 
     stop_time = datetime.datetime.now()
-    logger.info('All entities found after %s' % (stop_time - start_time))
+    logger.info(f'All entities found after {stop_time - start_time}')
 
 
 def clear(clear_url):
-    logger.info('deleting.... ' + clear_url)
+    logger.info(f'deleting.... {clear_url}')
 
     r = session.delete(clear_url)
 
     if r.status_code != 200:
-        logger.info('error deleting url=' + clear_url)
+        logger.info(f'error deleting url={clear_url}')
         logger.info(json.dumps(r.json()))
 
     else:
@@ -259,10 +257,8 @@ def test_url(q_url, sleep_time=0.25):
         else:
             logger.info('non 200')
 
-        if test_var:
-            logger.info('Test of URL [%s] Passes')
-        else:
-            logger.info('Test of URL [%s] Passes')
+        logger.info('Test of URL [%s] Passes')
+        if not test_var:
             time.sleep(sleep_time)
 
 
@@ -306,8 +302,9 @@ def init():
         'api_url': config.get('base_url'),
         'org': config.get('org'),
         'app': config.get('app'),
-        'collection': '%s-%s' % (socket.gethostname(), datetime.datetime.now().strftime('index-test-%yx%mx%dx%Hx%Mx%S'))
+        'collection': f"{socket.gethostname()}-{datetime.datetime.now().strftime('index-test-%yx%mx%dx%Hx%Mx%S')}",
     }
+
 
     config['url'] = url_template.format(**url_data)
     config['token_url'] = token_url_template.format(**url_data)
@@ -335,9 +332,9 @@ def main():
 
         if r.status_code == 200:
             access_token = r.json().get('access_token')
-            session.headers.update({'Authorization': 'Bearer %s' % access_token})
+            session.headers.update({'Authorization': f'Bearer {access_token}'})
         else:
-            logger.critical('unable to get token: %s' % r.text)
+            logger.critical(f'unable to get token: {r.text}')
             exit(1)
 
     try:

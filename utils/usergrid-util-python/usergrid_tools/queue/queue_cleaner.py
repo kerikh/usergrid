@@ -54,10 +54,14 @@ def get_time_remaining(count, rate):
 def parse_args():
     parser = argparse.ArgumentParser(description='Usergrid Loader - Queue Monitor')
 
-    parser.add_argument('-c', '--config',
-                        help='The queue to load into',
-                        type=str,
-                        default='%s/.usergrid/queue_monitor.json' % os.getenv("HOME"))
+    parser.add_argument(
+        '-c',
+        '--config',
+        help='The queue to load into',
+        type=str,
+        default=f'{os.getenv("HOME")}/.usergrid/queue_monitor.json',
+    )
+
 
     parser.add_argument('-q', '--queue_name',
                         help='The queue name to send messages to.  If not specified the filename is used',
@@ -66,7 +70,7 @@ def parse_args():
 
     my_args = parser.parse_args(sys.argv[1:])
 
-    print str(my_args)
+    parser = argparse.ArgumentParser(description='Usergrid Loader - Queue Monitor')
 
     return vars(my_args)
 
@@ -146,12 +150,12 @@ def main():
 
     queue_name = args.get('queue_name')
 
-    print 'queue_name=%s' % queue_name
+    args = parse_args()
 
     start_time = datetime.datetime.utcnow()
     first_start_time = start_time
 
-    print "first start: %s" % first_start_time
+    args = parse_args()
 
     with open(args.get('config'), 'r') as f:
         config = json.load(f)
@@ -161,10 +165,10 @@ def main():
 
     work_queue = Queue()
 
-    deleters = [Deleter(queue_name, sqs_config, work_queue) for x in xrange(100)]
+    deleters = [Deleter(queue_name, sqs_config, work_queue) for _ in xrange(100)]
     [w.start() for w in deleters]
 
-    workers = [Worker(queue_name, sqs_config, work_queue) for x in xrange(100)]
+    workers = [Worker(queue_name, sqs_config, work_queue) for _ in xrange(100)]
 
     [w.start() for w in workers]
 

@@ -151,10 +151,10 @@ for org, org_data in data_map.get('orgs', {}).iteritems():
 
     r = session.post(token_url, data=json.dumps(token_request))
 
-    check_response_status(r, message='Unable to get Token at URL %s' % token_url)
+    check_response_status(r, message=f'Unable to get Token at URL {token_url}')
 
     token = r.json().get('access_token')
-    session.headers.update({'Authorization': 'Bearer ' + token})
+    session.headers.update({'Authorization': f'Bearer {token}'})
 
     # iterate the apps specified in the config above
     for app, app_data in org_data.get('apps', {}).iteritems():
