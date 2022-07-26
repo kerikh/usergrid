@@ -56,10 +56,14 @@ def get_time_remaining(count, rate):
 def parse_args():
     parser = argparse.ArgumentParser(description='Usergrid Loader - Queue Monitor')
 
-    parser.add_argument('-c', '--config',
-                        help='The queue to load into',
-                        type=str,
-                        default='%s/.usergrid/queue_monitor.json' % os.getenv("HOME"))
+    parser.add_argument(
+        '-c',
+        '--config',
+        help='The queue to load into',
+        type=str,
+        default=f'{os.getenv("HOME")}/.usergrid/queue_monitor.json',
+    )
+
 
     parser.add_argument('-q', '--queue_name',
                         help='The queue name to send messages to.  If not specified the filename is used',
@@ -68,7 +72,7 @@ def parse_args():
 
     my_args = parser.parse_args(sys.argv[1:])
 
-    print str(my_args)
+    parser = argparse.ArgumentParser(description='Usergrid Loader - Queue Monitor')
 
     return vars(my_args)
 

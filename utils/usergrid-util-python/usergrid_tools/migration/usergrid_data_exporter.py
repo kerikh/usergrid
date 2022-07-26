@@ -86,8 +86,10 @@ def init_logging(stdout_enabled=True):
     logging.getLogger('urllib3.connectionpool').setLevel(logging.WARN)
 
     log_formatter = logging.Formatter(
-            fmt='%(asctime)s | ' + ECID + ' | %(name)s | %(processName)s | %(levelname)s | %(message)s',
-            datefmt='%m/%d/%Y %I:%M:%S %p')
+        fmt=f'%(asctime)s | {ECID} | %(name)s | %(processName)s | %(levelname)s | %(message)s',
+        datefmt='%m/%d/%Y %I:%M:%S %p',
+    )
+
 
     stdout_logger = logging.StreamHandler(sys.stdout)
     stdout_logger.setFormatter(log_formatter)
@@ -98,7 +100,7 @@ def init_logging(stdout_enabled=True):
 
     # base log file
 
-    log_file_name = '%s/migrator.log' % config.get('log_dir')
+    log_file_name = f"{config.get('log_dir')}/migrator.log"
 
     # ConcurrentRotatingFileHandler
     rotating_file = ConcurrentRotatingFileHandler(filename=log_file_name,
@@ -110,7 +112,7 @@ def init_logging(stdout_enabled=True):
 
     root_logger.addHandler(rotating_file)
 
-    error_log_file_name = '%s/migrator_errors.log' % config.get('log_dir')
+    error_log_file_name = f"{config.get('log_dir')}/migrator_errors.log"
     error_rotating_file = ConcurrentRotatingFileHandler(filename=error_log_file_name,
                                                         mode='a',
                                                         maxBytes=404857600,
@@ -168,7 +170,10 @@ class StatusListener(Process):
 
             try:
                 app, collection, status_map = self.status_queue.get(timeout=60)
-                status_logger.info('Received status update for app/collection: [%s / %s]' % (app, collection))
+                status_logger.info(
+                    f'Received status update for app/collection: [{app} / {collection}]'
+                )
+
                 empty_count = 0
                 org_results['summary'] = {
                     'max_created': -1,
@@ -233,37 +238,37 @@ class StatusListener(Process):
                                     org_results['summary']['min_created'] = collection_data.get('min_created')
 
                         if QSIZE_OK:
-                            status_logger.warn('CURRENT Queue Depth: %s' % self.worker_queue.qsize())
+                            status_logger.warn(f'CURRENT Queue Depth: {self.worker_queue.qsize()}')
 
-                        status_logger.warn('UPDATED status of org processed: %s' % json.dumps(org_results))
+                        status_logger.warn(
+                            f'UPDATED status of org processed: {json.dumps(org_results)}'
+                        )
+
 
                 except KeyboardInterrupt as e:
                     raise e
 
-                except:
-                    print(traceback.format_exc())
-
             except KeyboardInterrupt as e:
-                status_logger.warn('FINAL status of org processed: %s' % json.dumps(org_results))
+                status_logger.warn(f'FINAL status of org processed: {json.dumps(org_results)}')
                 raise e
 
             except Empty:
                 if QSIZE_OK:
-                    status_logger.warn('CURRENT Queue Depth: %s' % self.worker_queue.qsize())
+                    status_logger.warn(f'CURRENT Queue Depth: {self.worker_queue.qsize()}')
 
-                status_logger.warn('CURRENT status of org processed: %s' % json.dumps(org_results))
+                status_logger.warn(
+                    f'CURRENT status of org processed: {json.dumps(org_results)}'
+                )
 
-                status_logger.warning('EMPTY! Count=%s' % empty_count)
+
+                status_logger.warning(f'EMPTY! Count={empty_count}')
 
                 empty_count += 1
 
                 if empty_count >= 120:
                     keep_going = False
 
-            except:
-                print(traceback.format_exc())
-
-        logger.warn('FINAL status of org processed: %s' % json.dumps(org_results))
+        logger.warn(f'FINAL status of org processed: {json.dumps(org_results)}')
 
 
 class EntityExportWorker(Process):
@@ -296,21 +301,27 @@ class EntityExportWorker(Process):
                     status_map[collection_name]['iteration_finished'] = str(datetime.datetime.now())
 
                     collection_worker_logger.warning(
-                            'Collection [%s / %s / %s] loop complete!  Max Created entity %s' % (
-                                config.get('org'), app, collection_name, status_map[collection_name]['max_created']))
+                        f"Collection [{config.get('org')} / {app} / {collection_name}] loop complete!  Max Created entity {status_map[collection_name]['max_created']}"
+                    )
+
 
                     collection_worker_logger.warning(
-                            'Sending FINAL stats for app/collection [%s / %s]: %s' % (app, collection_name, status_map))
+                        f'Sending FINAL stats for app/collection [{app} / {collection_name}]: {status_map}'
+                    )
+
 
                     self.response_queue.put((app, collection_name, status_map))
 
-                    collection_worker_logger.info('Done! Finished app/collection: %s / %s' % (app, collection_name))
+                    collection_worker_logger.info(
+                        f'Done! Finished app/collection: {app} / {collection_name}'
+                    )
+
 
                 except KeyboardInterrupt as e:
                     raise e
 
                 except Empty:
-                    collection_worker_logger.warning('EMPTY! Count=%s' % empty_count)
+                    collection_worker_logger.warning(f'EMPTY! Count={empty_count}')
 
                     empty_count += 1
 
@@ -318,7 +329,10 @@ class EntityExportWorker(Process):
                         keep_going = False
 
                 except Exception as e:
-                    logger.exception('Error in CollectionWorker processing collection [%s]' % collection_name)
+                    logger.exception(
+                        f'Error in CollectionWorker processing collection [{collection_name}]'
+                    )
+
                     print(traceback.format_exc())
 
         finally:

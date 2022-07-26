@@ -39,7 +39,7 @@ class MarkdownProcessor(object):
             with open(input[1], 'wt') as f:
                 f.write(source[0].encode('utf-8'))
 
-            cmdline = "pandoc -r markdown -w rst %s -o %s" % (input[1], output[1])
+            cmdline = f"pandoc -r markdown -w rst {input[1]} -o {output[1]}"
             #print cmdline
             os.system(cmdline)
             source[0] = open(output[1]).read().decode('utf-8')

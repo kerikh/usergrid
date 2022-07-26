@@ -121,9 +121,7 @@ def test_multiple(number_of_entities, processes):
 
     start = datetime.datetime.now()
 
-    logger.info('Creating %s entities w/ url=%s' % (number_of_entities, config['url']))
-    created_map = {}
-
+    logger.info(f"Creating {number_of_entities} entities w/ url={config['url']}")
     work_items = []
 
     for x in xrange(1, number_of_entities + 1):
@@ -133,24 +131,21 @@ def test_multiple(number_of_entities, processes):
 
     responses = processes.map(create_entity, work_items)
 
-    for res in responses:
-        if len(res) > 0:
-            created_map[res[0]] = res[1]
-
+    created_map = {res[0]: res[1] for res in responses if len(res) > 0}
     stop = datetime.datetime.now()
 
-    logger.info('Created [%s] entities in %s' % (number_of_entities, (stop - start)))
+    logger.info(f'Created [{number_of_entities}] entities in {stop - start}')
 
     return created_map
 
 
 def clear(clear_url):
-    logger.info('deleting.... ' + clear_url)
+    logger.info(f'deleting.... {clear_url}')
 
     r = session.delete(clear_url)
 
     if r.status_code != 200:
-        logger.info('error deleting url=' + clear_url)
+        logger.info(f'error deleting url={clear_url}')
         logger.info(json.dumps(r.json()))
 
     else:
@@ -230,11 +225,10 @@ def create_entity(name, tag):
 
     r = session.post(url, data=json.dumps(create_me))
 
-    if r.status_code != 200:
-        logger.critical('unable to create entity: %s' % r.text)
-        return None
-    else:
+    if r.status_code == 200:
         return r.json().get('entities')[0]
+    logger.critical(f'unable to create entity: {r.text}')
+    return None
 
 
 def update_entity(entity_id, tag):
@@ -242,11 +236,10 @@ def update_entity(entity_id, tag):
     url = entity_url_template.format(entity_id=entity_id, **config.get('url_data'))
     r = session.put(url, data=json.dumps(data))
 
-    if r.status_code != 200:
-        logger.critical('unable to update entity!')
-        return False
-    else:
+    if r.status_code == 200:
         return True
+    logger.critical('unable to update entity!')
+    return False
 
 
 def wait_for_index(entity_id, tag, wait_time=.25):
@@ -254,7 +247,7 @@ def wait_for_index(entity_id, tag, wait_time=.25):
 
     url = query_url_template.format(tag=tag, **config.get('url_data'))
 
-    logger.info('GET %s' % url)
+    logger.info(f'GET {url}')
 
     entities = []
     elapsed = 0
@@ -263,7 +256,7 @@ def wait_for_index(entity_id, tag, wait_time=.25):
         r = session.get(url)
 
         if r.status_code != 200:
-            logger.critical('Unable to query, url=[%s]: %s' % (url, r.text))
+            logger.critical(f'Unable to query, url=[{url}]: {r.text}')
             return False
         else:
             res = r.json()
@@ -271,10 +264,12 @@ def wait_for_index(entity_id, tag, wait_time=.25):
             last_time = datetime.datetime.now()
             elapsed = last_time - start
             logger.info(
-                    'Tag [%s] not applied to [%s] after [%s].  Waiting [%s]...' % (tag, entity_id, elapsed, wait_time))
+                f'Tag [{tag}] not applied to [{entity_id}] after [{elapsed}].  Waiting [{wait_time}]...'
+            )
+
             time.sleep(wait_time)
 
-    logger.info('++Tag applied after [%s]!' % elapsed)
+    logger.info(f'++Tag applied after [{elapsed}]!')
 
 
 def test_entity_update():
@@ -288,17 +283,16 @@ def test_entity_update():
 
     uuid = entity.get('uuid')
 
-    for x in xrange(0, 10):
+    for _ in xrange(0, 10):
         tag = datetime.datetime.now().strftime('tag-%yx%mx%dx%Hx%Mx%S')
-        logger.info('Testing tag [%s] on entity [%s]' % (tag, name))
-        updated = update_entity(name, tag)
-        if updated: wait_for_index(name, tag)
-
-    for x in xrange(0, 10):
+        logger.info(f'Testing tag [{tag}] on entity [{name}]')
+        if updated := update_entity(name, tag):
+            wait_for_index(name, tag)
+    for _ in xrange(0, 10):
         tag = datetime.datetime.now().strftime('tag-%yx%mx%dx%Hx%Mx%S')
-        logger.info('Testing tag [%s] on entity [%s]' % (tag, uuid))
-        updated = update_entity(uuid, tag)
-        if updated: wait_for_index(uuid, tag)
+        logger.info(f'Testing tag [{tag}] on entity [{uuid}]')
+        if updated := update_entity(uuid, tag):
+            wait_for_index(uuid, tag)
 
 
 def main():
@@ -323,16 +317,15 @@ def main():
 
         if r.status_code == 200:
             access_token = r.json().get('access_token')
-            session.headers.update({'Authorization': 'Bearer %s' % access_token})
+            session.headers.update({'Authorization': f'Bearer {access_token}'})
         else:
-            logger.critical('unable to get token: %s' % r.text)
+            logger.critical(f'unable to get token: {r.text}')
             exit(1)
 
     try:
         test_entity_update()
 
     except KeyboardInterrupt:
-        pass
         processes.terminate()
 
 

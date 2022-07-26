@@ -34,11 +34,11 @@ __author__ = 'Jeff.West@yahoo.com'
 
 url_base = 'http://localhost:9200'
 
-r = requests.get(url_base + "/_stats")
+r = requests.get(f"{url_base}/_stats")
 
 indices = r.json()['indices']
 
-print 'retrieved %s indices' % len(indices)
+from multiprocessing import Pool
 
 NUMBER_VALUE = 0
 
@@ -63,9 +63,9 @@ indexes_to_delete = []
 
 
 def delete_index(index_name):
+    url_template = f'{url_base}/{index_name}'
     url_template = '%s/%s' % (url_base, index_name)
-    print 'DELETING Index [%s] %s at URL %s' % (delete_counter, index_name, url_template)
-    response = requests.delete('%s/%s' % (url_base, index))
+    response = requests.delete(f'{url_base}/{index}')
 
 for index in indices:
     process = False

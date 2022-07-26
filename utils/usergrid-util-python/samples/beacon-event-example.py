@@ -150,15 +150,16 @@ class EventGenerator(Process):
                 'eventType': 'enterStore'
             })
 
-            for x in xrange(0, self.event_count):
+            for _ in xrange(0, self.event_count):
                 beacon_number = random.randint(0, len(self.beacons) - 1)
                 beacon_name = self.beacons[beacon_number]
 
                 event = {
-                    'beaconId': '%s-%s' % (self.store_id, beacon_name),
+                    'beaconId': f'{self.store_id}-{beacon_name}',
                     'storeId': self.store_id,
-                    'eventType': 'beacon'
+                    'eventType': 'beacon',
                 }
+
 
                 self.create_event(user, event)
 

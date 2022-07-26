@@ -180,7 +180,7 @@ class Creator:
     def is_endpoint_available(self):
 
         try:
-            r = requests.get(url=self.endpoint+"/status")
+            r = requests.get(url=f"{self.endpoint}/status")
             if r.status_code == 200:
                 return True
         except requests.exceptions.RequestException as e:
@@ -189,7 +189,7 @@ class Creator:
 
 
 def exit_on_error(e=""):
-    print ("Exiting script due to error: " + str(e))
+    print(f"Exiting script due to error: {str(e)}")
     sys.exit(1)
 
 

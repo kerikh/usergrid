@@ -40,8 +40,10 @@ def init_logging(stdout_enabled=True):
     logging.getLogger('urllib3.connectionpool').setLevel(logging.WARN)
 
     log_formatter = logging.Formatter(
-            fmt='%(asctime)s | ' + execution_id + ' | %(name)s | %(levelname)s | %(message)s',
-            datefmt='%m/%d/%Y %I:%M:%S %p')
+        fmt=f'%(asctime)s | {execution_id} | %(name)s | %(levelname)s | %(message)s',
+        datefmt='%m/%d/%Y %I:%M:%S %p',
+    )
+
 
     stdout_logger = logging.StreamHandler(sys.stdout)
     stdout_logger.setFormatter(log_formatter)
@@ -54,7 +56,7 @@ def init_logging(stdout_enabled=True):
     # base log file
 
     log_dir = './'
-    log_file_name = '%s/usergrid_iterator.log' % log_dir
+    log_file_name = f'{log_dir}/usergrid_iterator.log'
 
     # ConcurrentLogHandler
     rotating_file = RotatingFileHandler(filename=log_file_name,
@@ -77,7 +79,7 @@ def main():
         exit(1)
 
     url = sys.argv[1]
-    logger.info('Beginning to iterate URL: %s' % url)
+    logger.info(f'Beginning to iterate URL: {url}')
 
     q = UsergridQueryIterator(url)
 
@@ -87,15 +89,18 @@ def main():
     try:
         for e in q:
             counter += 1
-            logger.info('Entity # [%s]: name=[%s] uuid=[%s] created=[%s] modified=[%s]' % (counter, e.get('name'), e.get('uuid'), e.get('created'), e.get('modified')))
+            logger.info(
+                f"Entity # [{counter}]: name=[{e.get('name')}] uuid=[{e.get('uuid')}] created=[{e.get('created')}] modified=[{e.get('modified')}]"
+            )
+
 
     except KeyboardInterrupt:
         logger.critical('KEYBOARD INTERRUPT')
-        pass
-
     finish = datetime.datetime.utcnow()
 
-    logger.info('final entity count is [%s] in  [%s] for query [%s]' % (counter, (finish-start), url))
+    logger.info(
+        f'final entity count is [{counter}] in  [{finish - start}] for query [{url}]'
+    )
 
 if __name__ == '__main__':
     main()

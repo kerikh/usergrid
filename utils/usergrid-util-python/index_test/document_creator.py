@@ -86,7 +86,7 @@ class Worker(Process):
         self.re_first_word = re.compile('([A-z]+)')
 
     def run(self):
-        print('Starting %s ' % self.name)
+        print(f'Starting {self.name} ')
 
         while True:
             task = self.work_queue.get(timeout=600)
@@ -143,11 +143,7 @@ class Worker(Process):
         fields = []
 
         for name, value in document.iteritems():
-            if base_name:
-                field_name = '%s.%s' % (base_name, name)
-            else:
-                field_name = name
-
+            field_name = f'{base_name}.{name}' if base_name else name
             if isinstance(value, dict):
                 fields += Worker.get_fields(value, field_name)
             else:
@@ -182,33 +178,24 @@ class Worker(Process):
 
     @staticmethod
     def process_document(document, application_id, uuid):
-        response = {
+        return {
             'entityId': uuid,
             'entityVersion': '1',
             'applicationId': application_id,
-            'fields': Worker.get_fields(document)
+            'fields': Worker.get_fields(document),
         }
 
-        return response
-
     def generate_location(self):
-        response = {}
-
         lat = random.random() * 90.0
         lon = random.random() * 180.0
 
-        lat_neg_true = True if lon > .5 else False
-        lon_neg_true = True if lat > .5 else False
+        lat_neg_true = lon > .5
+        lon_neg_true = lat > .5
 
         lat = lat * -1.0 if lat_neg_true else lat
         lon = lon * -1.0 if lon_neg_true else lon
 
-        response['location'] = {
-            'lat': lat,
-            'lon': lon
-        }
-
-        return response
+        return {'location': {'lat': lat, 'lon': lon}}
 
 
 class Writer(Process):
@@ -238,7 +225,10 @@ def main():
     work_queue = JoinableQueue()
     response_queue = JoinableQueue()
 
-    workers = [Worker(work_queue, response_queue) for x in xrange(args.get('workers'))]
+    workers = [
+        Worker(work_queue, response_queue) for _ in xrange(args.get('workers'))
+    ]
+
 
     writer = Writer(response_queue)
     writer.start()
@@ -250,10 +240,10 @@ def main():
         batch_size = 100000
         message_counter = 0
 
-        for doc_number in xrange(total_messages):
+        for _ in xrange(total_messages):
             message_counter += 1
 
-            for count in xrange(batch_size):
+            for _ in xrange(batch_size):
                 doc_id = str(uuid.uuid1())
 
                 task = {
@@ -264,10 +254,10 @@ def main():
 
                 work_queue.put(task)
 
-        print('Joining queues counter=[%s]...' % message_counter)
+        print(f'Joining queues counter=[{message_counter}]...')
         work_queue.join()
         response_queue.join()
-        print('Done queue counter=[%s]...' % message_counter)
+        print(f'Done queue counter=[{message_counter}]...')
 
     except KeyboardInterrupt:
         [worker.terminate() for worker in workers]

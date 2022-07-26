@@ -37,14 +37,13 @@ url_base = 'http://localhost:9200'
 # r = requests.get(url_base + "/_cat/indices?v")
 # print r.text
 
-r = requests.get(url_base + "/_stats")
+r = requests.get(f"{url_base}/_stats")
 
 # print json.dumps(r.json(), indent=2)
 
 indices = r.json()['indices']
 
-print 'retrieved %s indices' % len(indices)
-
+from multiprocessing import Pool
 NUMBER_VALUE = 1
 
 payload = {
@@ -67,7 +66,7 @@ update = False
 # print 'sleeping 1200s'
 # time.sleep(1200)
 
-index_names = sorted([index for index in indices])
+index_names = sorted(list(indices))
 
 
 def update_shards(index_name):

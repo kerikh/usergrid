@@ -68,10 +68,14 @@ def parse_args():
                         type=int,
                         default=10)
 
-    parser.add_argument('-c', '--config',
-                        help='The queue to load into',
-                        type=str,
-                        default='%s/.usergrid/queue_monitor.json' % os.getenv("HOME"))
+    parser.add_argument(
+        '-c',
+        '--config',
+        help='The queue to load into',
+        type=str,
+        default=f'{os.getenv("HOME")}/.usergrid/queue_monitor.json',
+    )
+
 
     parser.add_argument('--source_queue_name',
                         help='The queue name to send messages to.  If not specified the filename is used',
@@ -85,7 +89,7 @@ def parse_args():
 
     my_args = parser.parse_args(sys.argv[1:])
 
-    print str(my_args)
+    parser = argparse.ArgumentParser(description='Usergrid Loader - Queue Monitor')
 
     return vars(my_args)
 
@@ -172,7 +176,7 @@ def main():
     start_time = datetime.datetime.utcnow()
     first_start_time = start_time
 
-    print "first start: %s" % first_start_time
+    args = parse_args()
 
     with open(args.get('config'), 'r') as f:
         config = json.load(f)
@@ -181,10 +185,18 @@ def main():
 
     work_queue = Queue()
 
-    readers = [Reader(source_queue_name, sqs_config, work_queue) for r in xrange(args.get('readers'))]
+    readers = [
+        Reader(source_queue_name, sqs_config, work_queue)
+        for _ in xrange(args.get('readers'))
+    ]
+
     [r.start() for r in readers]
 
-    writers = [Writer(target_queue_name, sqs_config, work_queue) for r in xrange(args.get('writers'))]
+    writers = [
+        Writer(target_queue_name, sqs_config, work_queue)
+        for _ in xrange(args.get('writers'))
+    ]
+
     [w.start() for w in writers]
 
 
